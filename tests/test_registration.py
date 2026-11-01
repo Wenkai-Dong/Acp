@@ -12,8 +12,7 @@ import acp.tasks  # noqa: F401
 
 def test_task_registrations():
     """The project tasks must expose valid environment and agent entry points."""
-    assert all(
-        not str(spec.kwargs.get("env_cfg_entry_point", "")).startswith("acp.tasks")
-        for spec in gym.registry.values()
-    )
+    ids = {spec.id for spec in gym.registry.values()}
+    assert "Acp-DeepMimic-G1" in ids
+    assert "Acp-View-Motion-G1" in ids
 

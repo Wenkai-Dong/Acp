@@ -1,0 +1,14 @@
+motion_files:
+- motion_file: vault_over_R_001__A533/vault_over_R_001__A533_soma.csv
+  terrain_id: 0
+- motion_file: vault_over_R_001__A533_M/vault_over_R_001__A533_M_soma.csv
+  terrain_id: 0
+- motion_file: vault_over_R_003__A533/vault_over_R_003__A533_soma.csv
+  terrain_id: 1
+- motion_file: vault_over_R_003__A533_M/vault_over_R_003__A533_M_soma.csv
+  terrain_id: 1
+terrains:
+- terrain_file: vault_over_R_001__A533/box_R_001__A533.stl
+  terrain_id: 0
+- terrain_file: vault_over_R_003__A533/box_R_003__A533.stl
+  terrain_id: 1

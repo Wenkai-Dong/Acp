@@ -19,6 +19,7 @@ authors = [
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "isaaclab-dev",
+    "instinctlab",
 ]
 
 [project.entry-points."isaaclab.tasks"]
@@ -73,9 +74,12 @@ override-dependencies = [
     "fsspec>=2026.6.0",
     "packaging>=20,<27",
     "urllib3>=2.8.0",
+    "urdf-usd-converter==0.3.4",
+    "mujoco-usd-converter==0.7.0",
 ]
 
 [tool.uv.sources]
+"instinctlab" = { path = "../isaaclab/instinctlab/source/instinctlab", editable = true }
 "isaaclab" = { path = "../isaaclab/IsaacLab/source/isaaclab", editable = true }
 "isaaclab-assets" = { path = "../isaaclab/IsaacLab/source/isaaclab_assets", editable = true }
 "isaaclab-contrib" = { path = "../isaaclab/IsaacLab/source/isaaclab_contrib", editable = true }

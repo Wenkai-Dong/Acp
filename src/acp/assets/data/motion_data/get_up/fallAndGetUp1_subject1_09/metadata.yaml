@@ -1,0 +1,6 @@
+motion_files:
+- motion_file: fallAndGetUp1_subject1_09_retargeted.npz
+  terrain_id: 0
+terrains:
+- terrain_file: flat.stl
+  terrain_id: 0

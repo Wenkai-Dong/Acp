@@ -1,0 +1,6 @@
+motion_files:
+- motion_file: climb_22_z_scale_1.0_retargeted.npz
+  terrain_id: 0
+terrains:
+- terrain_file: multi_boxes_z_scale_1.0.stl
+  terrain_id: 0
