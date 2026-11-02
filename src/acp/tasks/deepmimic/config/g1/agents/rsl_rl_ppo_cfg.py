@@ -12,7 +12,7 @@ from isaaclab_rl.rsl_rl import RslRlMLPModelCfg, RslRlOnPolicyRunnerCfg, RslRlPp
 class G1DeepmimicPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 30000
-    save_interval = 50
+    save_interval = 100
     experiment_name = "box_climbing"
     obs_groups = {"actor": ["policy"], "critic": ["critic"]}
     actor = RslRlMLPModelCfg(
