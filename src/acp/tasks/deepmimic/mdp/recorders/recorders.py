@@ -1,0 +1,174 @@
+# Copyright (c) 2022-2026, The Isaac Lab Project Developers (https://github.com/isaac-sim/IsaacLab/blob/main/CONTRIBUTORS.md).
+# All rights reserved.
+#
+# SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+import argparse
+import torch
+import os
+import sys
+
+from isaaclab.managers.recorder_manager import RecorderTerm
+from isaaclab.utils.datasets import EpisodeData
+import isaaclab.sim as sim_utils
+from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
+from isaaclab_rl.entrypoints.common import _physics_backend_name
+from isaaclab_rl.utils.wandb import _WANDB_URI_PATTERN, _WANDB_URL_PATTERN
+
+
+class PostStepRootLinearVelocityBaseRecorder(RecorderTerm):
+
+    def record_post_step(self):
+        return "root_lin_vel_b", self._env.scene["robot"].data.root_lin_vel_b.torch
+
+
+class PostStepRootAngularVelocityBaseRecorder(RecorderTerm):
+
+    def record_post_step(self):
+        return "root_ang_vel_b", self._env.scene["robot"].data.root_ang_vel_b.torch
+
+
+class PostStepCommandBaseVelocityRecorder(RecorderTerm):
+
+    def record_post_step(self):
+        return "command_base_velocity", self._env.command_manager.get_command("base_velocity")
+
+
+class PreResetTerminationRecorder(RecorderTerm):
+
+    def record_pre_reset(self, env_ids: Sequence[int] | None):
+        if not hasattr(self, "_startup_done"):
+            self._startup_done = True
+            return None, None
+        reasons = torch.zeros(len(env_ids), dtype=torch.long, device=self._env.device)
+        for idx, term_name in enumerate(self._env.termination_manager.active_terms):
+            triggered = self._env.termination_manager.get_term(term_name)[env_ids] > 0.5
+            reasons[triggered] = idx
+        return "Termination", reasons
+
+
+class PostResetSubTerrainIndexRecorder(RecorderTerm):
+
+    def record_post_reset(self, env_ids: Sequence[int] | None):
+        return "sub_terrain", self._env.scene.terrain.terrain_types[env_ids]
+
+
+class PostResetEpisodeCountRecorder(RecorderTerm):
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self.episode_count = torch.zeros(self._env.scene.num_envs, dtype=torch.long, device=self._env.device)
+        self.max_episode = cfg.max_episode
+
+    def record_pre_reset(self, env_ids):
+        manager = self._env.recorder_manager
+        counts = self.episode_count[env_ids].tolist()
+        for env_id, count in zip(env_ids, counts):
+            if count > self.max_episode:
+                manager._episodes[env_id] = EpisodeData()
+        return None, None
+
+    def record_post_reset(self, env_ids: Sequence[int] | None):
+        self.episode_count[env_ids] += 1
+        if bool((self.episode_count > self.max_episode).all()):
+            raise KeyboardInterrupt
+        return "episode_count", self.episode_count[env_ids]
+
+
+def launch_arg(name: str) -> str | None:
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    parser.add_argument(name)
+    args, _ = parser.parse_known_args(sys.orig_argv[1:])
+    return getattr(args, name.lstrip("-"))
+
+
+def wandb_run_path_from_checkpoint() -> str | None:
+    checkpoint = launch_arg("--checkpoint")
+    if not checkpoint:
+        return None
+    match = _WANDB_URL_PATTERN.match(checkpoint) or _WANDB_URI_PATTERN.match(checkpoint)
+    return "{entity}/{project}/{run_id}".format(**match.groupdict()) if match else None
+
+
+class CloseSaveWandBRecorder(RecorderTerm):
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        sim_name = _physics_backend_name(env.cfg.sim.physics)
+        vx = env.cfg.commands.base_velocity.ranges.lin_vel_x[0]
+        diff = env.cfg.scene.terrain.terrain_generator.difficulty_range[0]
+
+        env.cfg.recorders.dataset_filename = f"{sim_name}_vx{vx}_diff{diff}"
+        self._file_path = os.path.abspath(
+            os.path.join(env.cfg.recorders.dataset_export_dir_path, env.cfg.recorders.dataset_filename)
+        )
+        if not self._file_path.endswith(".hdf5"):
+            self._file_path += ".hdf5"
+        self._finalized = False
+        orig_close = env.close
+
+        def _close_and_upload():
+            self._finalize()
+            orig_close()
+
+        env.close = _close_and_upload
+
+    def close(self, file_path):
+        self._finalize()
+
+    def _finalize(self):
+        if self._finalized:
+            return
+        self._finalized = True
+        # 先关闭 HDF5，确保文件完整写盘后再上传
+        manager = getattr(self._env, "recorder_manager", None)
+        handler = getattr(manager, "_dataset_file_handler", None)
+        if handler is not None:
+            handler.close()
+
+        run_path = wandb_run_path_from_checkpoint()
+        if run_path is None:
+            print(f"[INFO] Evaluation dataset saved locally: {self._file_path}", flush=True)
+            return
+        import wandb
+        wandb.Api().run(run_path).upload_file(self._file_path, root=os.path.dirname(self._file_path))
+        print(f"[INFO] Uploaded {os.path.basename(self._file_path)} -> {run_path}", flush=True)
+
+
+
+CONTACT_NAMES = ["pelvis", "left_knee", "right_knee", "left_foot", "right_foot", "left_elbow", "right_elbow", "left_hand", "right_hand"]
+
+class PostStepContactRecorder(RecorderTerm):
+
+    def record_post_step(self):
+        out = {}
+        for n in CONTACT_NAMES:
+            d = self._env.scene[f"contact_{n}"].data
+            out[n] = {
+                "contact_pos_w": d.contact_pos_w.torch[:, 0, 0],
+                "force_z": d.normal_force_matrix_w.torch[:, 0, 0, 2],
+            }
+        return "contact", out
+
+
+class PostStepVisualizationMarkers(RecorderTerm):
+
+    def __init__(self, cfg, env):
+        super().__init__(cfg, env)
+        self.contact_markers = VisualizationMarkers(VisualizationMarkersCfg(
+            prim_path="/Visuals/RightFootContact",
+            markers={
+                "contact": sim_utils.SphereCfg(
+                    radius=0.05,
+                    visual_material=sim_utils.PreviewSurfaceCfg(diffuse_color=(1.0, 0.0, 0.0)),
+                ),
+            },
+        ))
+
+    def record_post_step(self):
+        pts = torch.cat([self._env.scene[f"contact_{n}"].data.contact_pos_w.torch[:, 0, 0] for n in CONTACT_NAMES], dim=0,)
+        pts = torch.nan_to_num(pts, nan=-100.0)
+        self.contact_markers.visualize(translations=pts)
+        return None, None

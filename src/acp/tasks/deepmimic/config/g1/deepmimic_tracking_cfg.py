@@ -176,8 +176,8 @@ class G1PerceptiveShadowingEnvCfg(PerceptiveShadowingEnvCfg):
     def play_mode(self):
         """Play-mode overrides shared by the velocity-tracking environments."""
         super().play_mode()
-        self.scene.motion_reference.debug_vis = True
-        self.scene.robot_reference = G1_REFERENCE_CFG.replace(prim_path="{ENV_REGEX_NS}/RobotReference")
+        # self.scene.motion_reference.debug_vis = True
+        # self.scene.robot_reference = G1_REFERENCE_CFG.replace(prim_path="{ENV_REGEX_NS}/RobotReference")
 
         # deactivate adaptive sampling and start from the 0.0s of the motion
         self.curriculum.beyond_adaptive_sampling = None
@@ -198,7 +198,7 @@ class G1PerceptiveShadowingEnvCfg(PerceptiveShadowingEnvCfg):
             )
 
         # Use non-terrain-matching motion and plane to hack the scene.
-        self.scene.terrain.terrain_generator.num_rows = 6
+        self.scene.terrain.terrain_generator.num_rows = 1
         self.scene.terrain.terrain_generator.num_cols = 1
         # remove some terimation terms
         self.terminations.base_pos_too_far = None

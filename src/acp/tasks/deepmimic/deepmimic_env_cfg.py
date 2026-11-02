@@ -24,7 +24,7 @@ from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import RewardTermCfg as RewTerm
-from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers import SceneEntityCfg, RecorderManagerBaseCfg
 from isaaclab.managers import TerminationTermCfg as DoneTerm
 from isaaclab.physics import PhysxAutoCfg
 from isaaclab.scene import InteractiveSceneCfg
@@ -55,6 +55,12 @@ PROPRIO_HISTORY_LENGTH = 8
 ##
 # Physics backend presets
 ##
+
+
+@configclass
+class RecordersCfg(PresetCfg):
+    default = RecorderManagerBaseCfg()
+    recorder = mdp.ContactRecorderManagerCfg()
 
 
 @configclass
@@ -136,7 +142,7 @@ class MySceneCfg(InteractiveSceneCfg):
     motion_reference: MotionReferenceManagerCfg = MISSING  # type: ignore
     # sensors: the concrete implementation is selected automatically from the active physics backend;
     # backend-specific fields such as ``global_world_only`` are ignored by the backends that do not use them
-    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/[^/]*", history_length=3, track_air_time=True)
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/[^/]*", history_length=4, track_air_time=True)
     # lights
     sky_light = AssetBaseCfg(
         prim_path="/World/skyLight",
@@ -149,6 +155,7 @@ class MySceneCfg(InteractiveSceneCfg):
     def __post_init__(self):
         if type(self.motion_reference) is type(MISSING) or not self.motion_reference.debug_vis:
             delattr(self, "robot_reference")
+
 
 
 ##
@@ -616,7 +623,10 @@ class PerceptiveShadowingEnvCfg(InstinctLabRLEnvCfg):
     terminations: TerminationsCfg = TerminationsCfg()
     events: EventsCfg = EventsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
+    # Monitor Settings
     monitors: MonitorCfg = MonitorCfg()
+    # Recorders Settings
+    recorders: RecordersCfg = RecordersCfg()
 
     def __post_init__(self):
         """Post initialization."""
@@ -631,3 +641,66 @@ class PerceptiveShadowingEnvCfg(InstinctLabRLEnvCfg):
     def play_mode(self):
         """Play-mode overrides shared by the velocity-tracking environments."""
         super().play_mode()
+        self.scene.contact_pelvis = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/pelvis",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_left_knee = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/left_knee_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_right_knee = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/right_knee_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_left_foot = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/left_ankle_roll_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_right_foot = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/right_ankle_roll_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_left_elbow = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/left_elbow_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_right_elbow = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/right_elbow_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_left_hand = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/left_wrist_yaw_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
+        self.scene.contact_right_hand = ContactSensorCfg(
+            prim_path="{ENV_REGEX_NS}/Robot/right_wrist_yaw_link",
+            track_contact_points=True,
+            max_contact_data_count_per_prim=64,
+            history_length=4,
+            filter_prim_paths_expr=["/World/ground/terrain/mesh"],
+        )
