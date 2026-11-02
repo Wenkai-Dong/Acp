@@ -79,7 +79,7 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-"instinctlab" = { path = "../isaaclab/Instinctlab/source/instinctlab", editable = true }
+"instinctlab" = { path = "../isaaclab/InstinctLab/source/instinctlab", editable = true }
 "isaaclab" = { path = "../isaaclab/IsaacLab/source/isaaclab", editable = true }
 "isaaclab-assets" = { path = "../isaaclab/IsaacLab/source/isaaclab_assets", editable = true }
 "isaaclab-contrib" = { path = "../isaaclab/IsaacLab/source/isaaclab_contrib", editable = true }
