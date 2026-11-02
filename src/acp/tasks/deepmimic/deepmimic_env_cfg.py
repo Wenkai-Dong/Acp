@@ -109,8 +109,8 @@ class MySceneCfg(InteractiveSceneCfg):
             border_width=0.0,
             border_height=0.0,
             curriculum=True,
-            num_rows=23,
-            num_cols=1,
+            num_rows=4,
+            num_cols=4,
             sub_terrains={
                 "motion_matched": MotionMatchedTerrainCfg(
                     proportion=1.0,
