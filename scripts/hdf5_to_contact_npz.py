@@ -5,10 +5,11 @@ hdf5 里每个 episode 的结构（由 PostStepContactRecorder 录下）：
     data/demo_0/contact/<身体名>/contact_pos_w   (T, 3)  接触点世界坐标，没接触点时是 nan
     data/demo_0/contact/<身体名>/force_z         (T,)    和地形之间的竖直接触力
 
-输出的每个 npz 里有三样东西：
-    body_names   (9,)        9 个身体的名字，顺序和下面两个数组的第 1 维一一对应
+输出的每个 npz 里有四样东西：
+    body_names   (9,)        9 个 link 的名字（如 left_ankle_roll_link），顺序和下面两个数组的第 1 维一一对应
     contact      (T, 9)      bool，第 t 步第 b 个身体是否接触
     contact_pos_w  (T, 9, 3) float32，接触点的世界坐标（米）；没接触的地方是 nan
+    framerate    ()          每秒多少帧。默认从 hdf5 里读：1 / (sim.dt * decimation)，你的配置是 50
 
 判断接触的四步（见 make_contact）：
     1. 竖直力 > 1 N 算接触
@@ -19,21 +20,29 @@ hdf5 里每个 episode 的结构（由 PostStepContactRecorder 录下）：
 用法：
     python hdf5_to_contact_npz.py dataset.hdf5 out_dir
     python hdf5_to_contact_npz.py dataset.hdf5 out_dir --force_thresh 1.0 --max_gap 2 --min_len 10
+    python hdf5_to_contact_npz.py dataset.hdf5 out_dir --framerate 50   # 手动指定帧率
 """
 
 import argparse
+import json
 import os
 
 import h5py
 import numpy as np
 
-BODY_NAMES = [
-    "pelvis",
-    "left_knee", "right_knee",
-    "left_foot", "right_foot",
-    "left_elbow", "right_elbow",
-    "left_hand", "right_hand",
-]
+# hdf5 里的名字（记录器里 CONTACT_NAMES 用的） -> npz 里输出的 link 名字
+# 顺序就是 npz 里 9 个身体的顺序
+BODIES = {
+    "pelvis": "pelvis",
+    "left_knee": "left_knee_link",
+    "right_knee": "right_knee_link",
+    "left_foot": "left_ankle_roll_link",
+    "right_foot": "right_ankle_roll_link",
+    "left_elbow": "left_elbow_link",
+    "right_elbow": "right_elbow_link",
+    "left_hand": "left_wrist_yaw_link",
+    "right_hand": "right_wrist_yaw_link",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -141,7 +150,7 @@ def convert_demo(demo, force_thresh, max_gap, min_len):
     group = demo["contact"]
 
     contact_list, pos_list, stats_list = [], [], []
-    for name in BODY_NAMES:
+    for name in BODIES:                               # 按 hdf5 里的名字去读
         if name not in group:
             raise KeyError(f"hdf5 里找不到 'contact/{name}'")
         pos = np.asarray(group[name]["contact_pos_w"], dtype=np.float32)   # (T, 3)
@@ -156,7 +165,16 @@ def convert_demo(demo, force_thresh, max_gap, min_len):
 
     contact = np.stack(contact_list, axis=1)        # (T, 9)
     contact_pos = np.stack(pos_list, axis=1)        # (T, 9, 3)
-    return np.array(BODY_NAMES), contact, contact_pos, stats_list
+    link_names = np.array(list(BODIES.values()))     # 输出用 link 名字
+    return link_names, contact, contact_pos, stats_list
+
+
+def read_framerate(f):
+    """从 hdf5 的 data 属性 env_args 里读出 sim.dt 和 decimation，算出每秒多少个控制步。"""
+    env_args = json.loads(f["data"].attrs["env_args"])
+    sim_args = env_args["sim_args"]
+    step_dt = sim_args["dt"] * sim_args["decimation"]   # 一个控制步多少秒，例如 0.005 * 4 = 0.02
+    return round(1.0 / step_dt, 6)                       # round 去掉 49.99999999 这种小数误差
 
 
 def main():
@@ -166,24 +184,34 @@ def main():
     parser.add_argument("--force_thresh", type=float, default=1.0, help="竖直力超过多少牛算接触")
     parser.add_argument("--max_gap", type=int, default=2, help="断开不超过这么多步的空洞会被补上；0 表示不补")
     parser.add_argument("--min_len", type=int, default=10, help="短于这么多步的接触段会被去掉；0 表示不去")
+    parser.add_argument("--framerate", type=float, default=None, help="帧率；不填就从 hdf5 里自动读")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
 
     with h5py.File(args.hdf5_path, "r") as f:
+        framerate = args.framerate if args.framerate is not None else read_framerate(f)
+        print(f"帧率 framerate = {framerate}")
+
         for demo_name in f["data"]:
             body_names, contact, contact_pos, stats = convert_demo(
                 f["data"][demo_name], args.force_thresh, args.max_gap, args.min_len
             )
             out_path = os.path.join(args.out_dir, f"{demo_name}.npz")
-            np.savez(out_path, body_names=body_names, contact=contact, contact_pos_w=contact_pos)
+            np.savez(
+                out_path,
+                body_names=body_names,
+                contact=contact,
+                contact_pos_w=contact_pos,
+                framerate=np.array(framerate),
+            )
 
             print(f"{demo_name}: {contact.shape[0]} 步 -> {out_path}")
             for b, name in enumerate(body_names):
                 n_seg = len(find_segments(contact[:, b]))
                 s = stats[b]
                 print(
-                    f"    {name:12s} 接触 {int(contact[:, b].sum()):4d} 步, {n_seg} 段 | "
+                    f"    {name:22s} 接触 {int(contact[:, b].sum()):4d} 步, {n_seg} 段 | "
                     f"补空洞 {s['gaps_filled']}, 去短段 {s['short_removed']}, 补位置 {s['pos_filled']}"
                 )
 

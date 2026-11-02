@@ -69,8 +69,6 @@ class RoughPhysicsCfg(PresetCfg):
 
     isaacsim_physx = PhysxCfg(
         gpu_max_rigid_patch_count=10 * 2**15,
-        gpu_max_rigid_contact_count=2**27,
-        gpu_collision_stack_size=2**27,
     )
     ovphysx = OvPhysxCfg(gpu_max_rigid_patch_count=10 * 2**15)
     physx = PhysxAutoCfg(isaacsim_physx=isaacsim_physx, ovphysx=ovphysx)
