@@ -6,7 +6,7 @@ hdf5 里每个 episode 的结构（由 PostStepContactRecorder 录下）：
     data/demo_0/contact/<身体名>/force_z         (T,)    和地形之间的竖直接触力
 
 输出的每个 npz 里有四样东西：
-    body_names   (9,)        9 个 link 的名字（如 left_ankle_roll_link），顺序和下面两个数组的第 1 维一一对应
+    link_names   (9,)        9 个 link 的名字（如 left_ankle_roll_link），顺序和下面两个数组的第 1 维一一对应
     contact      (T, 9)      bool，第 t 步第 b 个身体是否接触
     contact_pos_w  (T, 9, 3) float32，接触点的世界坐标（米）；没接触的地方是 nan
     framerate    ()          每秒多少帧。默认从 hdf5 里读：1 / (sim.dt * decimation)，你的配置是 50
@@ -194,20 +194,20 @@ def main():
         print(f"帧率 framerate = {framerate}")
 
         for demo_name in f["data"]:
-            body_names, contact, contact_pos, stats = convert_demo(
+            link_names, contact, contact_pos, stats = convert_demo(
                 f["data"][demo_name], args.force_thresh, args.max_gap, args.min_len
             )
             out_path = os.path.join(args.out_dir, f"{demo_name}.npz")
             np.savez(
                 out_path,
-                body_names=body_names,
-                contact=contact,
-                contact_pos_w=contact_pos,
+                link_names=link_names,
+                link_contact=contact,
+                link_contact_pos_w=contact_pos,
                 framerate=np.array(framerate),
             )
 
             print(f"{demo_name}: {contact.shape[0]} 步 -> {out_path}")
-            for b, name in enumerate(body_names):
+            for b, name in enumerate(link_names):
                 n_seg = len(find_segments(contact[:, b]))
                 s = stats[b]
                 print(

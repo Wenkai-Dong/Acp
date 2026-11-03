@@ -97,6 +97,12 @@
       </geometry>
       <material name="white"/>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/left_hip_roll_collision.STL"/>
+      </geometry>
+    </collision>
   </link>
   <joint name="left_hip_roll_joint" type="revolute">
     <origin xyz="0 0.052 -0.030465" rpy="0 -0.1749 0"/>
@@ -313,6 +319,12 @@
       </geometry>
       <material name="white"/>
     </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/right_hip_roll_collision.STL"/>
+      </geometry>
+    </collision>
   </link>
   <joint name="right_hip_roll_joint" type="revolute">
     <origin xyz="0 -0.052 -0.030465" rpy="0 -0.1749 0"/>
@@ -706,7 +718,13 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/left_shoulder_yaw_link.STL"/>
+        <mesh filename="meshes/left_shoulder_yaw_0_collision.STL"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/left_shoulder_yaw_1_collision.STL"/>
       </geometry>
     </collision>
   </link>
@@ -908,7 +926,13 @@
     <collision>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <geometry>
-        <mesh filename="meshes/right_shoulder_yaw_link.STL"/>
+        <mesh filename="meshes/right_shoulder_yaw_0_collision.STL"/>
+      </geometry>
+    </collision>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <mesh filename="meshes/right_shoulder_yaw_1_collision.STL"/>
       </geometry>
     </collision>
   </link>
