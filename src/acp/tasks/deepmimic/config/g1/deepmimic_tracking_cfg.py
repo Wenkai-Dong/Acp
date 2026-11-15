@@ -9,7 +9,6 @@ import os
 
 from instinctlab.assets.unitree_g1 import (
     G1_29DOF_POLICY_JOINT_ORDER_V1,
-    G1_REFERENCE_CFG,
     beyondmimic_action_scale,
     beyondmimic_g1_29dof_actuators,
 )
@@ -25,7 +24,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 
 from acp.assets import ACP_ASSETS_DIR
-from acp.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_CFG
+from acp.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_CFG, G1_REFERENCE_CFG
 
 from ...deepmimic_env_cfg import (
     PerceptiveShadowingEnvCfg,
@@ -176,8 +175,8 @@ class G1PerceptiveShadowingEnvCfg(PerceptiveShadowingEnvCfg):
     def play_mode(self):
         """Play-mode overrides shared by the velocity-tracking environments."""
         super().play_mode()
-        # self.scene.motion_reference.debug_vis = True
-        # self.scene.robot_reference = G1_REFERENCE_CFG.replace(prim_path="{ENV_REGEX_NS}/RobotReference")
+        self.scene.motion_reference.debug_vis = True
+        self.scene.robot_reference = G1_REFERENCE_CFG.replace(prim_path="{ENV_REGEX_NS}/RobotReference")
 
         # deactivate adaptive sampling and start from the 0.0s of the motion
         self.curriculum.beyond_adaptive_sampling = None

@@ -1,0 +1,26 @@
+motion_files:
+- motion_file: sit_on_chair_start_R_001__A244/sit_on_chair_start_R_001__A244_soma.csv
+  terrain_id: 0
+- motion_file: sit_on_chair_start_R_001__A246/sit_on_chair_start_R_001__A246_soma.csv
+  terrain_id: 1
+- motion_file: sit_on_chair_start_R_001__A248/sit_on_chair_start_R_001__A248_soma.csv
+  terrain_id: 2
+- motion_file: sit_on_chair_stop_R_001__A244/sit_on_chair_stop_R_001__A244_soma.csv
+  terrain_id: 3
+- motion_file: sit_on_chair_stop_R_001__A246/sit_on_chair_stop_R_001__A246_soma.csv
+  terrain_id: 4
+- motion_file: sit_on_chair_stop_R_001__A248/sit_on_chair_stop_R_001__A248_soma.csv
+  terrain_id: 5
+terrains:
+- terrain_file: sit_on_chair_start_R_001__A244/chair_start_R_001__A244.stl
+  terrain_id: 0
+- terrain_file: sit_on_chair_start_R_001__A246/chair_start_R_001__A246.stl
+  terrain_id: 1
+- terrain_file: sit_on_chair_start_R_001__A248/chair_start_R_001__A248.stl
+  terrain_id: 2
+- terrain_file: sit_on_chair_stop_R_001__A244/chair_stop_R_001__A244.stl
+  terrain_id: 3
+- terrain_file: sit_on_chair_stop_R_001__A246/chair_stop_R_001__A246.stl
+  terrain_id: 4
+- terrain_file: sit_on_chair_stop_R_001__A248/chair_stop_R_001__A248.stl
+  terrain_id: 5

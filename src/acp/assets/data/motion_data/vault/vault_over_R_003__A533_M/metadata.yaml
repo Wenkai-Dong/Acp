@@ -1,5 +1,5 @@
 motion_files:
-- motion_file: vault_over_R_003__A533_M_soma.csv
+- motion_file: vault_over_R_003__A533_M_retargeted.npz
   terrain_id: 0
 terrains:
 - terrain_file: box_R_003__A533.stl

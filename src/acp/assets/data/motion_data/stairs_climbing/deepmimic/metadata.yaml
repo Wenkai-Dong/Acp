@@ -1,0 +1,24 @@
+motion_files:
+- motion_file: stairs_climbing_down_loop_R_001__A300/stairs_climbing_down_loop_R_001__A300_soma.csv
+  terrain_id: 0
+- motion_file: stairs_climbing_down_loop_R_002__A300/stairs_climbing_down_loop_R_002__A300_soma.csv
+  terrain_id: 1
+- motion_file: stairs_climbing_down_stop_R_001__A300/stairs_climbing_down_stop_R_001__A300_soma.csv
+  terrain_id: 2
+- motion_file: stairs_climbing_down_stop_R_002__A300/stairs_climbing_down_stop_R_002__A300_soma.csv
+  terrain_id: 2
+- motion_file: stairs_climbing_up_start_R_001__A300/stairs_climbing_up_start_R_001__A300_soma.csv
+  terrain_id: 3
+- motion_file: stairs_climbing_up_start_R_002__A300/stairs_climbing_up_start_R_002__A300_soma.csv
+  terrain_id: 4
+terrains:
+- terrain_file: stairs_climbing_down_loop_R_001__A300/stairs_climbing_down_loop_R_001__A300.stl
+  terrain_id: 0
+- terrain_file: stairs_climbing_down_loop_R_002__A300/stairs_climbing_down_loop_R_002__A300.stl
+  terrain_id: 1
+- terrain_file: stairs_climbing_down_stop_R_001__A300/stairs_climbing_down_stop_R.stl
+  terrain_id: 2
+- terrain_file: stairs_climbing_up_start_R_001__A300/stairs_climbing_up_start_R_001__A300.stl
+  terrain_id: 3
+- terrain_file: stairs_climbing_up_start_R_002__A300/stairs_climbing_up_start_R_002__A300.stl
+  terrain_id: 4

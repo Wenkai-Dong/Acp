@@ -1,0 +1,278 @@
+"""
+把 Isaac Lab 录下来的 hdf5 接触数据，转成每个 episode 一个 npz 文件。
+
+hdf5 里每个 episode 的结构：
+    data/demo_0/contact/<身体名>/contact_pos_w   (T, 3)  接触点世界坐标，没接触点时是 nan（PostStepContactRecorder 录的）
+    data/demo_0/contact/<身体名>/force_z         (T,)    和地形之间的竖直接触力（PostStepContactRecorder 录的）
+    data/demo_0/states/articulation/robot/root_pose  (T, 7)  基座位姿，用来判断离地形边缘多远
+
+输出的每个 npz 里有五样东西：
+    link_names          (9,)        9 个 link 的名字（如 left_ankle_roll_link），顺序和下面两个数组的第 1 维一一对应
+    link_contact        (T', 9)     bool，第 t 步第 b 个身体是否接触
+    link_contact_pos_w  (T', 9, 3)  float32，接触点的世界坐标（米）；没接触的地方是 nan
+    framerate           ()          每秒多少帧。默认从 hdf5 里读：1 / (sim.dt * decimation)，你的配置是 50
+    source_frames       (2,)        [start, end]：保留的是原始数据的第 start 到 end-1 帧
+T' 是截取后的帧数，和 hdf5_to_retargeted.py 输出的同一个 demo 帧数一样。
+
+判断接触的四步（见 make_contact）：
+    1. 竖直力 > 1 N 算接触
+    2. 补上很短的空洞（默认 <= 2 步）
+    3. 去掉很短的接触段（默认 < 10 步）
+    4. 整理位置：没接触 -> nan；接触但这一步没位置 -> 用同一段里相邻步的位置补
+
+截取（见 find_keep_range，规则和 hdf5_to_retargeted.py 完全一样）：
+    基座离地形边缘不到 EDGE_DIST 的帧不要，只保留中间连续的一段。
+    注意：先在整段数据上做上面四步，再截取。
+    这样截取边界上的接触段不会因为被截短而被第 3 步误删。
+
+用法：
+    python hdf5_to_contact.py dataset.hdf5 out_dir
+    python hdf5_to_contact.py dataset.hdf5 out_dir --force_thresh 1.0 --max_gap 2 --min_len 10
+    python hdf5_to_contact.py dataset.hdf5 out_dir --framerate 50   # 手动指定帧率
+"""
+
+import argparse
+import json
+import os
+
+import h5py
+import numpy as np
+
+# hdf5 里的名字（记录器里 CONTACT_NAMES 用的） -> npz 里输出的 link 名字
+# 顺序就是 npz 里 9 个身体的顺序
+BODIES = {
+    "pelvis": "pelvis",
+    "left_knee": "left_knee_link",
+    "right_knee": "right_knee_link",
+    "left_foot": "left_ankle_roll_link",
+    "right_foot": "right_ankle_roll_link",
+    "left_elbow": "left_elbow_link",
+    "right_elbow": "right_elbow_link",
+    "left_hand": "left_wrist_yaw_link",
+    "right_hand": "right_wrist_yaw_link",
+}
+
+# 下面两个数一定要和 hdf5_to_retargeted.py 里的一样，否则两边截出来的帧对不上
+TILE_SIZE = (9.0, 12.0)  # 一块地形的大小 (x, y)，坐标原点在地形中心
+EDGE_DIST = 0.5          # 基座离地形边缘不到这么远的帧不要
+
+
+# ---------------------------------------------------------------------------
+# 小工具：处理一个身体的接触序列 contact (T,) bool
+# ---------------------------------------------------------------------------
+
+def find_segments(contact):
+    """找出所有连续接触段，返回 [(开始, 结束), ...]，结束那一步不包含在内。"""
+    segments = []
+    T = len(contact)
+    t = 0
+    while t < T:
+        if contact[t]:
+            start = t
+            while t < T and contact[t]:
+                t += 1
+            segments.append((start, t))
+        else:
+            t += 1
+    return segments
+
+
+def fill_short_gaps(contact, max_gap):
+    """两段接触之间如果只断开 <= max_gap 步，就把中间补成接触。返回 (新序列, 补了几个空洞)。"""
+    contact = contact.copy()
+    segments = find_segments(contact)
+    n_filled = 0
+    for (_, end_a), (start_b, _) in zip(segments[:-1], segments[1:]):
+        gap = start_b - end_a
+        if gap <= max_gap:
+            contact[end_a:start_b] = True
+            n_filled += 1
+    return contact, n_filled
+
+
+def remove_short_segments(contact, min_len):
+    """连续接触少于 min_len 步的段改成没接触。返回 (新序列, 去掉了几段)。"""
+    contact = contact.copy()
+    n_removed = 0
+    for start, end in find_segments(contact):
+        if end - start < min_len:
+            contact[start:end] = False
+            n_removed += 1
+    return contact, n_removed
+
+
+def fill_missing_pos(pos, contact):
+    """接触段里如果有几步位置是 nan，用同一段里前一步（没有就用后一步）的位置补。返回补了几步。"""
+    n_filled = 0
+    for start, end in find_segments(contact):
+        seg = pos[start:end]                      # 这是 pos 的一部分，改它就是改 pos
+        valid = ~np.isnan(seg).any(axis=-1)
+        if valid.all():
+            continue
+        if not valid.any():
+            continue                              # 整段都没有位置，留给后面处理
+        # 先往后填：用前一个有效位置
+        for i in range(1, len(seg)):
+            if not valid[i] and valid[i - 1]:
+                seg[i] = seg[i - 1]
+                valid[i] = True
+                n_filled += 1
+        # 再往前填：段开头如果是 nan，用后一个有效位置
+        for i in range(len(seg) - 2, -1, -1):
+            if not valid[i] and valid[i + 1]:
+                seg[i] = seg[i + 1]
+                valid[i] = True
+                n_filled += 1
+    return n_filled
+
+
+# ---------------------------------------------------------------------------
+# 截取：去掉基座靠近地形边缘的帧（和 hdf5_to_retargeted.py 一样）
+# ---------------------------------------------------------------------------
+
+def find_keep_range(root_pose):
+    """
+    root_pose: (T, 7)，前两列是基座的 x, y（地形自己的坐标，原点在地形中心）。
+    返回 (start, end)：保留第 start 到 end-1 帧。如果基座一直离边缘太近，返回 None。
+    """
+    # 基座到最近一条边的距离 = min(x 方向到边的距离, y 方向到边的距离)
+    dist = np.minimum(
+        TILE_SIZE[0] / 2 - np.abs(root_pose[:, 0]),
+        TILE_SIZE[1] / 2 - np.abs(root_pose[:, 1]),
+    )
+    far = dist >= EDGE_DIST
+    if not far.any():
+        return None
+    start = int(np.argmax(far))                       # 第一次离开边缘区域的帧
+    back = np.flatnonzero(~far[start:])               # 之后再次靠近边缘的帧
+    end = start + int(back[0]) if len(back) else len(far)   # 只保留中间连续的一段
+    return start, end
+
+
+# ---------------------------------------------------------------------------
+# 主要逻辑
+# ---------------------------------------------------------------------------
+
+def make_contact(pos, force_z, force_thresh, max_gap, min_len):
+    """一个身体：从 (T,3) 位置和 (T,) 竖直力，得到 (T,) 接触标志和整理好的 (T,3) 位置。"""
+    pos = pos.copy()
+
+    # 第 1 步：竖直力超过阈值就算接触
+    contact = np.abs(force_z) > force_thresh
+
+    # 第 2 步：补上很短的空洞（只取当前物理步的力，偶尔会断一两步）
+    contact, n_gap = fill_short_gaps(contact, max_gap)
+
+    # 第 3 步：去掉很短的接触段
+    contact, n_short = remove_short_segments(contact, min_len)
+
+    # 第 4 步：整理位置
+    pos[~contact] = np.nan                        # 没接触 -> nan
+    n_pos = fill_missing_pos(pos, contact)        # 接触但没位置 -> 用相邻步补
+
+    # 万一某段整段都没有位置（理论上不会发生），这段就不算接触
+    no_pos = contact & np.isnan(pos).any(axis=-1)
+    contact[no_pos] = False
+
+    stats = dict(gaps_filled=n_gap, short_removed=n_short, pos_filled=n_pos, dropped_no_pos=int(no_pos.sum()))
+    return contact, pos, stats
+
+
+def convert_demo(demo, force_thresh, max_gap, min_len):
+    """把 hdf5 里的一个 demo（一个 episode）转成三个数组（还没截取，是完整长度）。"""
+    if "contact" not in demo:
+        raise KeyError("这个 demo 里没有 'contact'，检查 PostStepContactRecorder 有没有登记")
+    group = demo["contact"]
+
+    contact_list, pos_list, stats_list = [], [], []
+    for name in BODIES:                               # 按 hdf5 里的名字去读
+        if name not in group:
+            raise KeyError(f"hdf5 里找不到 'contact/{name}'")
+        pos = np.asarray(group[name]["contact_pos_w"], dtype=np.float32)   # (T, 3)
+        force_z = np.asarray(group[name]["force_z"], dtype=np.float32)    # (T,)
+        if pos.ndim != 2 or pos.shape[1] != 3:
+            raise ValueError(f"'contact/{name}/contact_pos_w' 形状是 {pos.shape}，应该是 (T, 3)")
+
+        c, p, s = make_contact(pos, force_z, force_thresh, max_gap, min_len)
+        contact_list.append(c)
+        pos_list.append(p)
+        stats_list.append(s)
+
+    contact = np.stack(contact_list, axis=1)        # (T, 9)
+    contact_pos = np.stack(pos_list, axis=1)        # (T, 9, 3)
+    link_names = np.array(list(BODIES.values()))     # 输出用 link 名字
+    return link_names, contact, contact_pos, stats_list
+
+
+def read_framerate(f):
+    """从 hdf5 的 data 属性 env_args 里读出 sim.dt 和 decimation，算出每秒多少个控制步。"""
+    env_args = json.loads(f["data"].attrs["env_args"])
+    sim_args = env_args["sim_args"]
+    step_dt = sim_args["dt"] * sim_args["decimation"]   # 一个控制步多少秒，例如 0.005 * 4 = 0.02
+    return round(1.0 / step_dt, 6)                       # round 去掉 49.99999999 这种小数误差
+
+
+def main():
+    parser = argparse.ArgumentParser(description="hdf5 接触数据 -> 每个 episode 一个 npz")
+    parser.add_argument("hdf5_path", help="Isaac Lab 录下来的 hdf5 文件")
+    parser.add_argument("out_dir", help="输出 npz 的文件夹")
+    parser.add_argument("--force_thresh", type=float, default=1.0, help="竖直力超过多少牛算接触")
+    parser.add_argument("--max_gap", type=int, default=2, help="断开不超过这么多步的空洞会被补上；0 表示不补")
+    parser.add_argument("--min_len", type=int, default=10, help="短于这么多步的接触段会被去掉；0 表示不去")
+    parser.add_argument("--framerate", type=float, default=None, help="帧率；不填就从 hdf5 里自动读")
+    args = parser.parse_args()
+
+    os.makedirs(args.out_dir, exist_ok=True)
+
+    with h5py.File(args.hdf5_path, "r") as f:
+        framerate = args.framerate if args.framerate is not None else read_framerate(f)
+        print(f"帧率 framerate = {framerate}")
+
+        for demo_name in f["data"]:
+            demo = f["data"][demo_name]
+
+            # 先算出要保留哪一段（和 hdf5_to_retargeted.py 一样的规则）
+            root_pose = demo["states/articulation/robot/root_pose"][:]   # (T, 7)
+            keep = find_keep_range(root_pose)
+            if keep is None:
+                print(f"{demo_name}: 基座一直离边缘不到 {EDGE_DIST} m，跳过")
+                continue
+            start, end = keep
+
+            # 在完整长度上判断接触（这样截取边界的接触段不会被误删）
+            link_names, contact, contact_pos, stats = convert_demo(
+                demo, args.force_thresh, args.max_gap, args.min_len
+            )
+
+            # 接触数据和基座位姿的帧数必须一样，不然截取的帧号对不上
+            if contact.shape[0] != root_pose.shape[0]:
+                raise ValueError(
+                    f"{demo_name}: 接触数据有 {contact.shape[0]} 步，root_pose 有 {root_pose.shape[0]} 步，长度不一样"
+                )
+
+            # 再截取
+            contact = contact[start:end]
+            contact_pos = contact_pos[start:end]
+
+            out_path = os.path.join(args.out_dir, f"{demo_name}.npz")
+            np.savez(
+                out_path,
+                link_names=link_names,
+                link_contact=contact,
+                link_contact_pos_w=contact_pos,
+                framerate=np.array(framerate),
+                source_frames=np.array([start, end]),   # 和 retargeted npz 里的一样，可以用来核对
+            )
+
+            print(f"{demo_name}: 保留原始第 {start}~{end - 1} 帧，共 {end - start} 帧 -> {out_path}")
+            for b, name in enumerate(link_names):
+                n_seg = len(find_segments(contact[:, b]))
+                s = stats[b]
+                print(
+                    f"    {name:22s} 接触 {int(contact[:, b].sum()):4d} 步, {n_seg} 段 | "
+                    f"补空洞 {s['gaps_filled']}, 去短段 {s['short_removed']}, 补位置 {s['pos_filled']}"
+                )
+
+
+if __name__ == "__main__":
+    main()

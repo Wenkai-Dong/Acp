@@ -1,13 +1,7 @@
 motion_files:
-- motion_file: fallAndGetUp1_subject1_00/fallAndGetUp1_subject1_00_retargeted.npz
-  terrain_id: 0
-- motion_file: fallAndGetUp1_subject1_01/fallAndGetUp1_subject1_01_retargeted.npz
-  terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_02/fallAndGetUp1_subject1_02_retargeted.npz
   terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_03/fallAndGetUp1_subject1_03_retargeted.npz
-  terrain_id: 0
-- motion_file: fallAndGetUp1_subject1_04/fallAndGetUp1_subject1_04_retargeted.npz
   terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_05/fallAndGetUp1_subject1_05_retargeted.npz
   terrain_id: 0
@@ -17,15 +11,11 @@ motion_files:
   terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_08/fallAndGetUp1_subject1_08_retargeted.npz
   terrain_id: 0
-- motion_file: fallAndGetUp1_subject1_09/fallAndGetUp1_subject1_09_retargeted.npz
-  terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_10/fallAndGetUp1_subject1_10_retargeted.npz
   terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_11/fallAndGetUp1_subject1_11_retargeted.npz
   terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_12/fallAndGetUp1_subject1_12_retargeted.npz
-  terrain_id: 0
-- motion_file: fallAndGetUp1_subject1_13/fallAndGetUp1_subject1_13_retargeted.npz
   terrain_id: 0
 - motion_file: fallAndGetUp1_subject1_14/fallAndGetUp1_subject1_14_retargeted.npz
   terrain_id: 0

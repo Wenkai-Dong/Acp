@@ -13,8 +13,7 @@ import os
 from instinctlab.sim import UrdfFileCfg
 
 from isaaclab.actuators import ImplicitActuatorCfg
-from isaaclab.assets import AssetBaseCfg
-from isaaclab.assets.articulation import ArticulationCfg
+from isaaclab.assets import ArticulationCfg, apply_articulation_ordering_preset, AssetBaseCfg
 from isaaclab.sim.schemas import UsdPhysicsCollisionCfg, UsdPhysicsDriveCfg
 from isaaclab.utils import configclass
 from isaaclab_physx.sim.schemas import PhysxArticulationCfg, PhysxRigidBodyCfg
@@ -191,6 +190,8 @@ UNITREE_G1_29DOF_CFG = UnitreeArticulationCfg(
         "right_wrist_yaw_joint",
     ],
 )
+
+UNITREE_G1_29DOF_Physx_CFG = apply_articulation_ordering_preset(UNITREE_G1_29DOF_CFG, "physx")
 
 
 ARMATURE_5020 = 0.003609725

@@ -1,0 +1,6 @@
+motion_files:
+- motion_file: walk1_subject1/walk1_subject1_retargeted.npz
+  terrain_id: 0
+terrains:
+- terrain_file: walk1_subject1/flat.stl
+  terrain_id: 0

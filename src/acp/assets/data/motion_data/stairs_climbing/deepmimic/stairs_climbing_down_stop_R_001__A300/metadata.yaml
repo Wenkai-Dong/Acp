@@ -1,0 +1,7 @@
+motion_files:
+- motion_file: stairs_climbing_down_stop_R_001__A300_soma.csv
+  terrain_id: 0
+terrains:
+- terrain_file: stairs_climbing_down_stop_R.stl
+  terrain_id: 0
+

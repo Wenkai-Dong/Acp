@@ -21,7 +21,7 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.view_motion_cfg:ViewMotionEnvCfg",
         "default_agent": "rsl_rl",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1DeepmimicPPORunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1DeepMimicPPORunnerCfg",
     },
 )
 
@@ -32,6 +32,6 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": f"{__name__}.deepmimic_tracking_cfg:G1PerceptiveShadowingEnvCfg",
         "default_agent": "rsl_rl",
-        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1DeepmimicPPORunnerCfg",
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1DeepMimicPPORunnerCfg",
     },
 )

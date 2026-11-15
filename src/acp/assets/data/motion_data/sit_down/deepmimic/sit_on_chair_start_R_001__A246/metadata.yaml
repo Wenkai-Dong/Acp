@@ -1,0 +1,6 @@
+motion_files:
+- motion_file: sit_on_chair_start_R_001__A246_soma.csv
+  terrain_id: 0
+terrains:
+- terrain_file: chair_start_R_001__A246.stl
+  terrain_id: 0

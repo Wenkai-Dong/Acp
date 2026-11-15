@@ -9,7 +9,7 @@ from isaaclab_rl.rsl_rl import RslRlMLPModelCfg, RslRlOnPolicyRunnerCfg, RslRlPp
 
 
 @configclass
-class G1DeepmimicPPORunnerCfg(RslRlOnPolicyRunnerCfg):
+class G1DeepMimicPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
     max_iterations = 30000
     save_interval = 100

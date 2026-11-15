@@ -1,0 +1,8 @@
+motion_files:
+- motion_file: pallets_narrow_vx_1.5_retargeted.npz
+  terrain_id: 0
+- motion_file: pallets_narrow_vx_1.0_retargeted.npz
+  terrain_id: 0
+terrains:
+- terrain_file: pallets_narrow.STL
+  terrain_id: 0

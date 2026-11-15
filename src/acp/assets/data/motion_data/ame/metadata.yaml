@@ -1,0 +1,20 @@
+motion_files:
+- motion_file: beams/beam_vx_1.5_retargeted.npz
+  terrain_id: 0
+- motion_file: beams/beam_vx_1.0_retargeted.npz
+  terrain_id: 0
+- motion_file: pallets_narrow/pallets_narrow_vx_1.5_retargeted.npz
+  terrain_id: 1
+- motion_file: pallets_narrow/pallets_narrow_vx_1.0_retargeted.npz
+  terrain_id: 1
+- motion_file: stepping_stones_narrow/stepping_stones_narrow_vx_1.5_retargeted.npz
+  terrain_id: 2
+- motion_file: stepping_stones_narrow/stepping_stones_narrow_vx_1.0_retargeted.npz
+  terrain_id: 2
+terrains:
+- terrain_file: beams/beams.stl
+  terrain_id: 0
+- terrain_file: pallets_narrow/pallets_narrow.stl
+  terrain_id: 1
+- terrain_file: stepping_stones_narrow/stepping_stones_narrow.stl
+  terrain_id: 2

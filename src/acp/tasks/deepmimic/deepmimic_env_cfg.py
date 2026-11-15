@@ -48,7 +48,7 @@ from isaaclab_physx.physics import PhysxCfg
 
 from isaaclab_tasks.utils import PresetCfg
 
-from . import mdp
+from acp.envs import mdp
 
 PROPRIO_HISTORY_LENGTH = 8
 
