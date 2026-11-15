@@ -68,7 +68,7 @@ class RoughPhysicsCfg(PresetCfg):
 
     isaacsim_physx = PhysxCfg(
         gpu_max_rigid_patch_count=10 * 2**15,
-        gpu_found_lost_aggregate_pairs_capacity = 2 ** 27,
+        gpu_found_lost_aggregate_pairs_capacity=2 ** 27,
     )
     ovphysx = OvPhysxCfg(gpu_max_rigid_patch_count=10 * 2**15)
     physx = PhysxAutoCfg(isaacsim_physx=isaacsim_physx, ovphysx=ovphysx)
@@ -109,8 +109,8 @@ class MySceneCfg(InteractiveSceneCfg):
             border_width=0.0,
             border_height=0.0,
             curriculum=True,
-            num_rows=22,
-            num_cols=20,
+            num_rows=25,
+            num_cols=16,
             sub_terrains={
                 "motion_matched": MotionMatchedTerrainCfg(
                     proportion=1.0,
