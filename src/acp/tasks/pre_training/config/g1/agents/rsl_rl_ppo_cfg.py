@@ -11,7 +11,7 @@ from isaaclab_rl.rsl_rl import RslRlMLPModelCfg, RslRlOnPolicyRunnerCfg, RslRlPp
 @configclass
 class G1PreTrainingPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 30000
+    max_iterations = 50000
     save_interval = 50
     experiment_name = "pre_training"
     obs_groups = {"actor": ["actor_prop_his", "actor_map", "actor_contact"], "critic": ["critic_prop", "critic_map", "critic_ref_kin"]}
@@ -32,7 +32,7 @@ class G1PreTrainingPPORunnerCfg(RslRlOnPolicyRunnerCfg):
         clip_param=0.2,
         entropy_coef=0.006,
         num_learning_epochs=5,
-        num_mini_batches=12,
+        num_mini_batches=4,
         learning_rate=1.0e-4,
         schedule="adaptive",
         gamma=0.99,

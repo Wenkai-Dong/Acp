@@ -67,8 +67,8 @@ class RoughPhysicsCfg(PresetCfg):
     """Shared backend presets for locomotion velocity environments."""
 
     isaacsim_physx = PhysxCfg(
-        gpu_max_rigid_patch_count=10 * 2**15,
-        gpu_found_lost_aggregate_pairs_capacity=2 ** 27,
+        gpu_max_rigid_patch_count=10 * 2**16,
+        gpu_found_lost_aggregate_pairs_capacity=2**27,
     )
     ovphysx = OvPhysxCfg(gpu_max_rigid_patch_count=10 * 2**15)
     physx = PhysxAutoCfg(isaacsim_physx=isaacsim_physx, ovphysx=ovphysx)
