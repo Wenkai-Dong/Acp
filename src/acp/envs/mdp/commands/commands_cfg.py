@@ -26,6 +26,8 @@ class LinkContactPosRefCommandCfg(ShadowingCommandBaseCfg):
 
     sensor_name: str = MISSING
 
+    asset_name: str = MISSING
+
     visualizer_cfg: VisualizationMarkersCfg = VisualizationMarkersCfg(
         prim_path="/Visuals/LinkPosRefCommand",
         markers={
@@ -44,7 +46,7 @@ class GoalPose2dCommandCfg(CommandTermCfg):
 
     motion_reference: SceneEntityCfg = SceneEntityCfg("motion_reference")
 
-    sensor_name: str = MISSING
+    asset_name: str = MISSING
 
     radius: float = MISSING
 

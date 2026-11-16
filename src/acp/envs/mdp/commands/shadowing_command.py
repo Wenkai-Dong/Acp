@@ -33,6 +33,8 @@ class LinkContactPosRefCommand(ShadowingCommandBase):
 
     def __init__(self, cfg: LinkContactPosRefCommandCfg, env: ManagerBasedRLEnv, ):
         super().__init__(cfg, env)
+        # -- robot
+        self.robot: Articulation = env.scene[cfg.asset_name]
         # -- planner_height_scanner
         self.sensor: RayCaster = env.scene.sensors[cfg.sensor_name]
 
@@ -76,26 +78,22 @@ class LinkContactPosRefCommand(ShadowingCommandBase):
     def _update_command_by_env_ids(self, env_ids: Sequence[int] | torch.Tensor):
         link_contact_next_pos_w = self._motion_reference.data.link_contact_next_pos_w[env_ids]
 
-        sensor_pos_w = self.sensor.data.pos_w.torch[env_ids]
-        sensor_quat_w = self.sensor.data.quat_w.torch[env_ids]
-        rel_w = link_contact_next_pos_w - sensor_pos_w[:, None, None, :]
-        link_contact_next_pos_t = math_utils.quat_apply_inverse(
-            math_utils.yaw_quat(sensor_quat_w)[:, None, None, :].expand(-1, rel_w.shape[1], rel_w.shape[2], -1), rel_w
+        root_pos_w = self.robot.data.root_pos_w.torch[env_ids]
+        root_quat_w = self.robot.data.root_quat_w.torch[env_ids]
+        root_rel_w = link_contact_next_pos_w - root_pos_w[:, None, None, :]
+        link_contact_next_pos_b = math_utils.quat_apply_inverse(
+            math_utils.yaw_quat(root_quat_w)[:, None, None, :]
+            .expand(-1, root_rel_w.shape[1], root_rel_w.shape[2], -1), root_rel_w
         )
         # out of planner_height_scanner
         in_sensor = (
-            (link_contact_next_pos_t[..., 0] >= self.sensor_min[0]) & (link_contact_next_pos_t[..., 0] <= self.sensor_max[0])
-            & (link_contact_next_pos_t[..., 1] >= self.sensor_min[1]) & (link_contact_next_pos_t[..., 1] <= self.sensor_max[1])
+            (link_contact_next_pos_b[..., 0] >= self.sensor_min[0]) & (link_contact_next_pos_b[..., 0] <= self.sensor_max[0])
+            & (link_contact_next_pos_b[..., 1] >= self.sensor_min[1]) & (link_contact_next_pos_b[..., 1] <= self.sensor_max[1])
         )
 
-        root_pos_w = self._env.scene[self.cfg.asset_cfg.name].data.root_pos_w.torch[env_ids]
-        root_quat_w = self._env.scene[self.cfg.asset_cfg.name].data.root_quat_w.torch[env_ids]
-        rel_root_w = link_contact_next_pos_w - root_pos_w[:, None, None, :]
-        link_contact_next_pos_b = math_utils.quat_apply_inverse(
-            math_utils.yaw_quat(root_quat_w)[:, None, None, :].expand(-1, rel_root_w.shape[1], rel_root_w.shape[2], -1), rel_root_w
+        link_contact_next_pos_b = torch.where(
+            in_sensor.unsqueeze(-1), link_contact_next_pos_b, torch.full_like(link_contact_next_pos_b, float("nan"))
         )
-
-        link_contact_next_pos_b = torch.where(in_sensor.unsqueeze(-1), link_contact_next_pos_b, torch.full_like(link_contact_next_pos_b, float("nan")))
 
         self._command[env_ids, :, :, :] = (
             torch.nan_to_num(link_contact_next_pos_b, nan=0.0)
@@ -111,8 +109,8 @@ class LinkContactPosRefCommand(ShadowingCommandBase):
         )
 
     def _compute_debug_vis_data(self):
-        root_pos_w = self._env.scene[self.cfg.asset_cfg.name].data.root_pos_w.torch
-        yaw_q = math_utils.yaw_quat(self._env.scene[self.cfg.asset_cfg.name].data.root_quat_w.torch)
+        root_pos_w = self.robot.data.root_pos_w.torch
+        yaw_q = math_utils.yaw_quat(self.robot.data.root_quat_w.torch)
 
         p_b = self._command[:, 0]
         valid = self._mask[:, 0]
@@ -133,8 +131,8 @@ class GoalPose2dCommand(CommandTerm):
         self._motion_reference: MotionReferenceManagerBase = env.scene[cfg.motion_reference.name]
 
         # obtain the robot and terrain assets
-        # -- planner_height_scanner
-        self.sensor: RayCaster = env.scene.sensors[cfg.sensor_name]
+        # -- robot
+        self.robot: Articulation = env.scene[cfg.asset_name]
 
         # crete buffers to store the command
         # -- commands: (x, y, z, heading)
@@ -173,10 +171,10 @@ class GoalPose2dCommand(CommandTerm):
     def _update_metrics(self):
         # logs data
         self.metrics["error_pos"] = torch.linalg.norm(
-            self.pos_command_w[:, :2] - self.sensor.data.pos_w.torch[:, :2], dim=1
+            self.pos_command_w[:, :2] - self.robot.data.root_pos_w.torch[:, :2], dim=1
         )
         self.metrics["error_heading"] = torch.abs(wrap_to_pi(
-            self.heading_command_w - math_utils.euler_xyz_from_quat(self.sensor.data.quat_w.torch)[2])
+            self.heading_command_w - math_utils.euler_xyz_from_quat(self.robot.data.root_quat_w.torch)[2])
         )
 
     def _resample_command(self, env_ids: Sequence[int]):
@@ -190,8 +188,8 @@ class GoalPose2dCommand(CommandTerm):
         )
 
     def _update_command(self):
-        base_pos_w = self.sensor.data.pos_w.torch
-        base_quat_w = self.sensor.data.quat_w.torch
+        base_pos_w = self.robot.data.root_pos_w.torch
+        base_quat_w = self.robot.data.root_quat_w.torch
         base_yaw = math_utils.euler_xyz_from_quat(base_quat_w)[2]
 
         target_vec = self.pos_command_w - base_pos_w

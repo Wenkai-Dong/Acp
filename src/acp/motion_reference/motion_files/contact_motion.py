@@ -203,26 +203,22 @@ class ContactMotion(TerrainMotion):
 
         # compute the frame selection for each env
         frame_simple_ = self._frame_simple(assigned_ids=assigned_ids, sample_timestamp=sample_timestamp, goal_range=(0.5,1.5))
-        # goal torso_link position world
+        # goal base position world
         data_buffer.goal_base_pos_w[env_ids] = (
-            self._all_motion_sequences.link_pos_w[
+            self._all_motion_sequences.base_pos_w[
                 self._assigned_env_motion_selection[assigned_ids_across_frame_],
                 frame_simple_,
-            ][:, None, self.link_of_interests.index("torso_link")]
-            .reshape(env_ids.numel(), *data_buffer.goal_base_pos_w.shape[1:])
-            .to(self.output_device)
+            ][:, None].reshape(env_ids.numel(), *data_buffer.goal_base_pos_w.shape[1:]).to(self.output_device)
         )
         # update the goal_base_pos_w with the env_origins
         data_buffer.goal_base_pos_w[env_ids] += (self._get_motion_based_origin(env_origins, env_ids).unsqueeze(1))
 
         # goal torso_link quat world
         data_buffer.goal_base_quat_w[env_ids] = (
-            self._all_motion_sequences.link_quat_w[
+            self._all_motion_sequences.base_quat_w[
                 self._assigned_env_motion_selection[assigned_ids_across_frame_],
                 frame_simple_,
-            ][:, None, self.link_of_interests.index("torso_link")]
-            .reshape(env_ids.numel(), *data_buffer.goal_base_quat_w.shape[1:])
-            .to(self.output_device)
+            ][:, None].reshape(env_ids.numel(), *data_buffer.goal_base_quat_w.shape[1:]).to(self.output_device)
         )
 
 

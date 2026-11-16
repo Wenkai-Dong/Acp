@@ -142,7 +142,7 @@ class MySceneCfg(InteractiveSceneCfg):
     # sensors: the concrete implementation is selected automatically from the active physics backend;
     # backend-specific fields such as ``global_world_only`` are ignored by the backends that do not use them
     tracker_height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/torso_link",
+        prim_path="{ENV_REGEX_NS}/Robot/pelvis",
         offset=RayCasterCfg.OffsetCfg(pos=(0.2, 0.0, 20.0)),
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[0.8, 0.6]),
@@ -152,7 +152,7 @@ class MySceneCfg(InteractiveSceneCfg):
         ray_cast_drift_range={"x": (-0.05, 0.05), "y": (-0.05, 0.05), "z": (-0.05, 0.05)},
     )
     planner_height_scanner = RayCasterCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/torso_link",
+        prim_path="{ENV_REGEX_NS}/Robot/pelvis",
         offset=RayCasterCfg.OffsetCfg(pos=(0.4, 0.0, 20.0)),
         ray_alignment="yaw",
         pattern_cfg=patterns.GridPatternCfg(resolution=0.1, size=[1.6, 1.0]),
@@ -187,11 +187,12 @@ class CommandsCfg:
 
     link_contact_pos_ref_command = mdp.LinkContactPosRefCommandCfg(
         sensor_name="planner_height_scanner",
+        asset_name="robot",
         current_state_command=False,
         debug_vis=True,
     )
     goal_pose_command = mdp.GoalPose2dCommandCfg(
-        sensor_name="planner_height_scanner",
+        asset_name="robot",
         resampling_time_range=(0.5, 0.5),
         debug_vis=True,
         radius=0.3,
@@ -245,11 +246,11 @@ class ObservationsCfg:
         # observation terms (order preserved)
         height_scan = ObsTerm(
             func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("tracker_height_scanner"), "offset": 0.825},
-            noise=Unoise(n_min=-0.05, n_max=0.05),
+            params={"sensor_cfg": SceneEntityCfg("tracker_height_scanner"), "offset": 0.74},
+            noise=Unoise(n_min=-0.1, n_max=0.1),
             delay_min_lag=2,
             delay_max_lag=5,
-            clip=(-2.0, 2.0),
+            clip=(-1.5, 1.5),
         )
 
         def __post_init__(self):
@@ -298,8 +299,8 @@ class ObservationsCfg:
         # observation terms (order preserved)
         height_scan = ObsTerm(
             func=mdp.height_scan,
-            params={"sensor_cfg": SceneEntityCfg("planner_height_scanner"), "offset": 0.825},
-            clip=(-2.0, 2.0),
+            params={"sensor_cfg": SceneEntityCfg("planner_height_scanner"), "offset": 0.74},
+            clip=(-1.5, 1.5),
         )
 
         def __post_init__(self):
@@ -333,15 +334,7 @@ class ObservationsCfg:
             func=instinct_mdp.link_pos_reference_as_state,
             history_length=1,
             flatten_history_dim=True,
-            params={
-                "asset_cfg": SceneEntityCfg(name="motion_reference", body_names=[
-                    "pelvis",
-                    "left_knee_link", "right_knee_link",
-                    "left_ankle_roll_link", "right_ankle_roll_link",
-                    "left_elbow_link", "right_elbow_link",
-                    "left_wrist_yaw_link", "right_wrist_yaw_link",
-                ]),
-            },
+            params={"asset_cfg": SceneEntityCfg(name="motion_reference"),},
         )
         ref_contact_flags = ObsTerm(func=mdp.contact_flags_reference_as_state)
 
@@ -504,7 +497,7 @@ class RewardsCfg:
     )
     track_contact_pos_global = RewTerm(
         func=mdp.track_contact_pos_global,
-        weight=2.0,
+        weight=1.0,
         params={"sigma_c": 1.0},
     )
     # Regularization
@@ -571,7 +564,7 @@ class TerminationsCfg:
             "distance_threshold": 0.25,
             "check_at_keyframe_threshold": -1,
             "print_reason": False,
-            "height_only": False,
+            "height_only": True,
         },
     )
     base_pg_too_far = DoneTerm(
@@ -608,23 +601,23 @@ class TerminationsCfg:
             "print_reason": False,
         },
     )
-    mid_link_pos_too_far = DoneTerm(
-        func=instinct_mdp.link_pos_far_from_ref,
-        time_out=False,
-        params={
-            "asset_cfg": SceneEntityCfg("robot"),
-            "reference_cfg": SceneEntityCfg(
-                "motion_reference",
-                body_names=["left_knee_link", "right_knee_link", "left_elbow_link", "right_elbow_link"],
-                preserve_order=True,
-            ),
-            "distance_threshold": 0.25,
-            "in_base_frame": False,
-            "check_at_keyframe_threshold": -1,
-            "height_only": True,
-            "print_reason": False,
-        },
-    )
+    # mid_link_pos_too_far = DoneTerm(
+    #     func=instinct_mdp.link_pos_far_from_ref,
+    #     time_out=False,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot"),
+    #         "reference_cfg": SceneEntityCfg(
+    #             "motion_reference",
+    #             body_names=["left_knee_link", "right_knee_link", "left_elbow_link", "right_elbow_link"],
+    #             preserve_order=True,
+    #         ),
+    #         "distance_threshold": 0.25,
+    #         "in_base_frame": False,
+    #         "check_at_keyframe_threshold": -1,
+    #         "height_only": True,
+    #         "print_reason": False,
+    #     },
+    # )
     dataset_exhausted = DoneTerm(
         func=instinct_mdp.dataset_exhausted,
         time_out=True,
