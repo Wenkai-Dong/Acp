@@ -25,19 +25,19 @@ class DelayedJointPositionAction(JointPositionAction):
 
     cfg: delayed_actions_cfg.DelayedJointPositionActionCfg
 
-    def __init__(self, cfg: actions_cfg.DelayedJointPositionActionCfg, env: ManagerBasedEnv):
+    def __init__(self, cfg: delayed_actions_cfg.DelayedJointPositionActionCfg, env: ManagerBasedEnv):
         # initialize the action term
         super().__init__(cfg, env)
 
-        self._delay_buffer = DelayBuffer(cfg.max_delay, self.num_envs, device=self.device)
-        lags = torch.randint(cfg.min_delay, cfg.max_delay + 1, (self.num_envs,), dtype=torch.int, device=self.device)
-        self._delay_buffer.set_time_lag(lags)
+        self._delay_buffer = DelayBuffer(
+            cfg.max_delay, self.num_envs, device=self.device, min_lag=cfg.min_delay, hold_prob=1.0
+        )
 
 
     def apply_actions(self):
         # set position targets
         delayed = self._delay_buffer.compute(self.processed_actions)
-        self._asset.set_joint_position_target_index(target=delayed, joint_ids=self._joint_ids)
+        self._asset.actuators.target_command.set_position_index(value=delayed, joint_ids=self._joint_ids)
 
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
         super().reset(env_ids)

@@ -91,15 +91,17 @@ class ContactSequence:
 @dataclass
 class ContactReferenceData(MotionReferenceData):
 
-    link_contact: torch.Tensor = None  # type: ignore
+    link_contact: torch.Tensor = None   # type: ignore
 
-    link_contact_pos_w: torch.Tensor = None  # type: ignore
+    link_contact_pos_w: torch.Tensor = None # type: ignore
 
-    link_contact_next_pos_w: torch.Tensor = None  # type: ignore
+    link_contact_next_pos_w: torch.Tensor = None    # type: ignore
 
-    goal_base_pos_w: torch.Tensor = None  # type: ignore
+    goal_base_pos_w: torch.Tensor = None    # type: ignore
 
-    goal_base_quat_w: torch.Tensor = None  # type: ignore
+    goal_base_quat_w: torch.Tensor = None   # type: ignore
+
+    goal_time_ahead: torch.Tensor = None    # type: ignore
 
     @staticmethod
     def make_empty(
@@ -118,4 +120,5 @@ class ContactReferenceData(MotionReferenceData):
         values["link_contact_next_pos_w"] = ProxyArray(wp.zeros((num_envs, num_frames, num_contact_links, 3), device=str(device)))
         values["goal_base_pos_w"] = ProxyArray(wp.zeros((num_envs, 1, 3), device=str(device)))
         values["goal_base_quat_w"] = ProxyArray(wp.zeros((num_envs, 1, 4), device=str(device)))
+        values["goal_time_ahead"] = ProxyArray(wp.zeros((num_envs, 1), device=str(device)))
         return ContactReferenceData(**values)

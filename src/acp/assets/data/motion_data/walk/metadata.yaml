@@ -3,6 +3,10 @@ motion_files:
   terrain_id: 0
 - motion_file: walk1_subject1_1/walk1_subject1_1_retargeted.npz
   terrain_id: 0
+- motion_file: walk1_subject1_2/walk1_subject1_2_retargeted.npz
+  terrain_id: 0
+- motion_file: walk1_subject1_3/walk1_subject1_3_retargeted.npz
+  terrain_id: 0
 terrains:
 - terrain_file: flat.stl
   terrain_id: 0

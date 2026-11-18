@@ -7,11 +7,6 @@
 
 import os
 
-from instinctlab.assets.unitree_g1 import (
-    G1_29DOF_POLICY_JOINT_ORDER_V1,
-    beyondmimic_action_scale,
-    beyondmimic_g1_29dof_actuators,
-)
 from instinctlab.monitors import MonitorTermCfg as MonitorTerm
 from instinctlab.motion_reference.motion_files.amass_motion_cfg import AmassMotionCfg as AmassMotionCfgBase
 from instinctlab.motion_reference.utils import motion_interpolate_bilinear
@@ -22,7 +17,7 @@ from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 
 from acp.assets import ACP_ASSETS_DIR
-from acp.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_CFG, G1_REFERENCE_CFG
+from acp.assets.robots.unitree import UNITREE_G1_29DOF_MIMIC_CFG, G1_REFERENCE_CFG, UNITREE_G1_29DOF_MIMIC_ACTION_SCALE
 from acp.motion_reference import ContactReferenceManagerCfg
 from acp.motion_reference.motion_files.contact_motion_cfg import ContactMotionCfg as ContactMotionCfgBase
 
@@ -86,7 +81,7 @@ motion_reference_cfg = ContactReferenceManagerCfg(
     symmetric_augmentation_link_mapping=None,
     symmetric_augmentation_joint_mapping=None,
     symmetric_augmentation_joint_reverse_buf=None,
-    symmetric_augmentation_joint_names=list(G1_29DOF_POLICY_JOINT_ORDER_V1),
+    symmetric_augmentation_joint_names=list(G1_CFG.joint_sdk_names),
     frame_interval_s=0.0,
     update_period=0.02,
     num_frames=1,
@@ -114,32 +109,52 @@ class G1PerceptiveShadowingEnvCfg(PerceptiveShadowingEnvCfg):
         # scene
         self.scene.robot = G1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         self.scene.motion_reference = motion_reference_cfg
-        self.events.reset_robot.params["position_offset"] = backend_preset([0.0, 0.0, 0.0], newton=[0.0, 0.0, 0.05])
-        joint_order = list(G1_29DOF_POLICY_JOINT_ORDER_V1)
-
-        action_joint_order = [n for n in joint_order if "wrist" not in n]
+        self.events.reset_robot.params["position_offset"] = backend_preset([0.0, 0.0, 0.0], newton=[0.0, 0.0, 0.0])
+        # actions
+        action_joint_order = [n for n in list(G1_CFG.joint_sdk_names) if "wrist" not in n]
         set_cfg_joint_order(self.actions.joint_pos, action_joint_order)
-        # self.observations.policy.joint_pos.params["asset_cfg"] = set_cfg_joint_order(
-        #     SceneEntityCfg("robot"), joint_order
-        # )
-        # self.observations.policy.joint_vel.params["asset_cfg"] = set_cfg_joint_order(
-        #     SceneEntityCfg("robot"), joint_order
-        # )
-        # self.observations.critic.joint_pos.params["asset_cfg"] = set_cfg_joint_order(
-        #     SceneEntityCfg("robot"), joint_order
-        # )
-        # self.observations.critic.joint_vel.params["asset_cfg"] = set_cfg_joint_order(
-        #     SceneEntityCfg("robot"), joint_order
-        # )
-        # set_cfg_joint_order(self.commands.joint_pos_ref_command.asset_cfg, joint_order)
-        # set_cfg_joint_order(self.commands.joint_vel_ref_command.asset_cfg, joint_order)
-
-        self.scene.robot.actuators = beyondmimic_g1_29dof_actuators
-        # self.scene.robot.spawn.rigid_props.max_depenetration_velocity = 0.3
         self.actions.joint_pos.scale = {
-            k: v for k, v in beyondmimic_action_scale.items() if "wrist" not in k
+            k: v for k, v in UNITREE_G1_29DOF_MIMIC_ACTION_SCALE.items() if "wrist" not in k
         }
-
+        # observations
+        self.observations.actor_prop_his.joint_pos.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.observations.actor_prop_his.joint_vel.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.observations.critic_prop.joint_pos.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.observations.critic_prop.joint_vel.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.observations.critic_ref_kin.ref_joint_pos_rel.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("motion_reference"), action_joint_order
+        )
+        self.observations.critic_ref_kin.ref_joint_vel.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("motion_reference"), action_joint_order
+        )
+        # rewards
+        self.rewards.track_joint_pos.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.rewards.track_joint_vel.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.rewards.joint_torque.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.rewards.torque_limits.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.rewards.dof_pos_limits.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        self.rewards.dof_vel_limits.params["asset_cfg"] = set_cfg_joint_order(
+            SceneEntityCfg("robot"), action_joint_order
+        )
+        # motion_reference
         MOTION_NAME = list(self.scene.motion_reference.motion_buffers.keys())[0]
         self.scene.motion_reference.motion_buffers[MOTION_NAME].metadata_yaml = os.path.join(
             self.scene.motion_reference.motion_buffers[MOTION_NAME].path, "metadata.yaml"
@@ -157,23 +172,6 @@ class G1PerceptiveShadowingEnvCfg(PerceptiveShadowingEnvCfg):
             self.scene.terrain.terrain_generator.sub_terrains["motion_matched"].metadata_yaml = os.path.join(
                 self.scene.motion_reference.motion_buffers[MOTION_NAME].path, "metadata.yaml"
             )
-
-        # match key links for observation terms
-        # self.observations.critic.link_pos.params["asset_cfg"].body_names = self.scene.motion_reference.link_of_interests
-        # self.observations.critic.link_rot.params["asset_cfg"].body_names = self.scene.motion_reference.link_of_interests
-        # self.observations.policy.link_pos.params["asset_cfg"].body_names = self.scene.motion_reference.link_of_interests
-        # self.observations.policy.link_rot.params["asset_cfg"].body_names = self.scene.motion_reference.link_of_interests
-
-        self.run_name = "g1Perceptive" + "".join(
-            [
-                (
-                    "_concatMotionBins"
-                    if self.scene.motion_reference.motion_buffers[MOTION_NAME].env_starting_stub_sampling_strategy
-                    == "concat_motion_bins"
-                    else "_independentMotionBins"
-                ),
-            ]
-        )
 
     def play_mode(self):
         """Play-mode overrides shared by the velocity-tracking environments."""

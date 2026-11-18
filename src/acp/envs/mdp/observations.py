@@ -63,7 +63,20 @@ Body state
 """
 
 
+def ref_contact_link_pos(
+    env: ManagerBasedEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    motion_ref_cfg: SceneEntityCfg = SceneEntityCfg("motion_reference"),
+) -> torch.Tensor:
+    robot: Articulation = env.scene[asset_cfg.name]
+    motion_reference: MotionReferenceManagerBase = env.scene[motion_ref_cfg.name]
 
+    ref_link_pos_w = motion_reference.reference_frame.link_pos_w[:, 0]
+    root_pos_w = robot.data.root_pos_w.torch    # (N, 3)
+    yaw_q = math_utils.yaw_quat(robot.data.root_quat_w.torch)   # (N, 4)
+    rel_w = ref_link_pos_w - root_pos_w[:, None, :] # (N, 9, 3)
+    rel_b = math_utils.quat_apply_inverse(yaw_q[:, None, :].expand(-1, rel_w.shape[1], -1), rel_w)
+    return rel_b.reshape(rel_b.shape[0], -1)    # (N, 27)
 
 
 """
@@ -72,11 +85,6 @@ Joint state.
 
 
 
-
-
-"""
-Sensors.
-"""
 
 
 """

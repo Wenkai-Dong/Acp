@@ -17,12 +17,16 @@ import torch
 
 from isaaclab.managers import ManagerTermBase, SceneEntityCfg, TerminationTermCfg
 
+import instinctlab.motion_reference.utils as motion_reference_utils
+
 if TYPE_CHECKING:
     from isaaclab.assets import Articulation, RigidObject
     from isaaclab.managers.command_manager import CommandTerm
     from isaaclab.sensors import ContactSensor
     from isaaclab.envs import ManagerBasedRLEnv
     from isaaclab.envs.mdp.commands.pose_command import UniformPoseCommand
+
+    from instinctlab.motion_reference.motion_reference_manager import MotionReferenceManager
 
 """
 MDP terminations.
@@ -74,6 +78,40 @@ def subterrain_out_of_bounds(
         return torch.logical_or(x_out_of_bounds, y_out_of_bounds)
     else:
         raise ValueError("Received unsupported terrain type, must be either 'plane' or 'generator'.")
+
+
+def pos_xy_far_from_ref(
+    env: ManagerBasedRLEnv,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+    reference_cfg: SceneEntityCfg = SceneEntityCfg("motion_reference"),
+    distance_threshold: float = 0.5,
+    check_at_keyframe_threshold: float = 0.01,
+    print_reason: bool = False,
+) -> torch.Tensor:
+    distance = motion_reference_utils.get_base_position_distance(
+        env,
+        asset_cfg,
+        reference_cfg,
+        masking=True,
+        squared=False,
+        return_diff=True,
+    )
+    distance = torch.norm(distance[..., :2], dim=-1)
+    distance = motion_reference_utils.matching_reference_timing(
+        env,
+        distance,
+        env.scene[reference_cfg.name],
+        check_at_keyframe_threshold=check_at_keyframe_threshold,
+        multiply_by_frame_interval=False,
+    )
+
+    return_ = distance > distance_threshold
+    if print_reason and return_.any():
+        motion_reference: MotionReferenceManager = env.scene[reference_cfg.name]
+        env_ids = torch.where(return_)[0]
+        motion_identifiers = motion_reference.get_current_motion_identifiers(env_ids=env_ids)
+        print(f"pos_far_from_ref: {return_.sum()} at {motion_identifiers}")
+    return return_
 
 
 """

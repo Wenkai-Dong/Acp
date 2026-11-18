@@ -182,6 +182,10 @@ class GoalPose2dCommand(CommandTerm):
         goal_base_quat_w = self._motion_reference.data.goal_base_quat_w.torch[env_ids][:, 0]
         self.pos_command_w[env_ids] = goal_base_pos_w
         self.heading_command_w[env_ids] = math_utils.euler_xyz_from_quat(goal_base_quat_w)[2]
+
+        time_ahead = self._motion_reference.data.goal_time_ahead.torch[env_ids][:, 0]
+        self.time_left[env_ids] = torch.clamp(time_ahead - 0.5, min=self._env.step_dt)
+
         valid = self._motion_reference.data.validity.torch[env_ids][:, 0]
         self.time_left[env_ids] = torch.where(
             valid, self.time_left[env_ids], torch.zeros_like(self.time_left[env_ids])

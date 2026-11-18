@@ -9,10 +9,11 @@ __all__ = [
     "CloseSaveWandBRecorderCfg",
     "ContactRecorderManagerCfg",
     "contact_acc",
-    "contact_flags_reference_as_state"
+    "contact_flags_reference_as_state",
     "DelayedJointPositionAction",
     "DelayedJointPositionActionCfg",
     "elevation_map_vfloor",
+    "ref_contact_link_pos",
     "g1",
     "g1_depth_history",
     "g1_dual",
@@ -25,6 +26,7 @@ __all__ = [
     "joint_zero_position_bias",
     "LinkContactPosRefCommand",
     "LinkContactPosRefCommandCfg",
+    "pos_xy_far_from_ref",
     "PostResetEpisodeCountRecorder",
     "PostResetEpisodeCountRecorderCfg",
     "PostResetSubTerrainIndexRecorder",
@@ -70,7 +72,7 @@ from .commands import (
 )
 from .curriculums import sub_terrain_levels_vel, StartPhaseWeighting
 from .events import joint_zero_position_bias, randomize_virtual_floor
-from .observations import elevation_map_vfloor, contact_flags_reference_as_state
+from .observations import contact_flags_reference_as_state, elevation_map_vfloor, ref_contact_link_pos
 from .recorders import (
     CloseSaveWandBRecorder,
     CloseSaveWandBRecorderCfg,
@@ -110,8 +112,7 @@ from .rewards import (
     track_joint_vel,
 )
 from .symmetry import g1, g1_depth_history, g1_dual, g1_history
-from .terminations import root_height_below_minimum_terrain, subterrain_out_of_bounds
+from .terminations import pos_xy_far_from_ref, root_height_below_minimum_terrain, subterrain_out_of_bounds
 
 from isaaclab.envs.mdp import *
-
-from instinctlab.envs.mdp import *
+from isaaclab_tasks.core.locomotion.mdp import *

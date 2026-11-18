@@ -202,7 +202,9 @@ class ContactMotion(TerrainMotion):
         )
 
         # compute the frame selection for each env
-        frame_simple_ = self._frame_simple(assigned_ids=assigned_ids, sample_timestamp=sample_timestamp, goal_range=(0.5,1.5))
+        frame_simple_, time_ahead = self._frame_simple(
+            assigned_ids=assigned_ids, sample_timestamp=sample_timestamp, goal_range=(0.5,1.5)
+        )
         # goal base position world
         data_buffer.goal_base_pos_w[env_ids] = (
             self._all_motion_sequences.base_pos_w[
@@ -220,6 +222,9 @@ class ContactMotion(TerrainMotion):
                 frame_simple_,
             ][:, None].reshape(env_ids.numel(), *data_buffer.goal_base_quat_w.shape[1:]).to(self.output_device)
         )
+
+        # goal time ahead
+        data_buffer.goal_time_ahead[env_ids] = time_ahead.to(self.output_device)
 
 
     def _get_link_contact_next_pos_w(self, assigned_ids_across_frame_, frame_selections_):
@@ -269,7 +274,11 @@ class ContactMotion(TerrainMotion):
             - 1,
         ).to(torch.long)
 
-        return frame_selections.flatten()
+        framerate = self._all_motion_sequences.framerate[self._assigned_env_motion_selection[assigned_ids]].unsqueeze(-1).float()
+        current_time = self._motion_buffer_start_time_s[assigned_ids].unsqueeze(-1) + sample_timestamp
+        time_ahead = frame_selections.float() / framerate - current_time    # (n, 1)
+
+        return frame_selections.flatten(), time_ahead
 
     def _sample_assigned_env_motion_selection(self, assigned_ids: torch.Tensor) -> None:
         """Resample the motion selection for the buffer, build the motion selection if not built.
