@@ -65,8 +65,8 @@ environments = [
 override-dependencies = [
     "numpy>=2",
     "mujoco~=3.15.0",
-    "mujoco-warp~=3.15.0",
-    "newton[sim] @ git+https://github.com/newton-physics/newton.git@42f7def118c2c4299ce493457bafd4e8a22a696e",
+    "mujoco-warp~=3.17.0",
+    "newton[sim] @ git+https://github.com/newton-physics/newton.git@d31603ff5e8389d1d6b2a5daef6ea2cb074c26ff",
     "newton-usd-schemas>=0.5.0",
     "usd-exchange==3.0.1",
     "usd-optimize~=1.3.1",
@@ -77,6 +77,7 @@ override-dependencies = [
     "urllib3>=2.8.0",
     "urdf-usd-converter==0.3.4",
     "mujoco-usd-converter==0.7.0",
+    "scipy>=1.18.0",
 ]
 
 [tool.uv.sources]
